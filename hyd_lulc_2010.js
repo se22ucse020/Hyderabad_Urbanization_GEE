@@ -33,3 +33,43 @@ var visL7_2010 = {
 Map.addLayer(l7_2010, visL7_2010, 'Landsat 7 - 2010');
 
 // ---- TODO: Add classification code here ----
+Map.addLayer(l7_2010, visL7_2010, 'Landsat 7 - 2010');
+
+// ---- TODO: Add Classification code here ----
+
+
+// ================== CLASSIFICATION BLOCK ==================
+
+// STEP 1: Add NDVI & NDBI
+var img = l7_2010;   // <--- USE l7_2010 IN THIS FILE
+
+var ndvi = img.normalizedDifference(['SR_B4', 'SR_B3']).rename('NDVI');
+var ndbi = img.normalizedDifference(['SR_B6', 'SR_B5']).rename('NDBI');
+
+var stacked = img.addBands(ndvi).addBands(ndbi);
+
+// STEP 2: Training data (you will draw in GEE)
+var trainingFC = urban.merge(veg).merge(water).merge(soil);
+
+var training = stacked.sampleRegions({
+  collection: trainingFC,
+  properties: ['class'],
+  scale: 30,
+  tileScale: 4
+});
+
+// STEP 3: Train classifier
+var classifier = ee.Classifier.smileRandomForest(100)
+  .train({
+    features: training,
+    classProperty: 'class',
+    inputProperties: stacked.bandNames()
+  });
+
+// STEP 4: Classify
+var classified = stacked.classify(classifier);
+
+// STEP 5: Visualize
+var palette = [
+  'ff0000', //
+
